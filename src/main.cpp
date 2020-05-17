@@ -1,6 +1,10 @@
 #include "I2Cdev.h"
 #include "MPU6050.h"
 #include "common.h"
+#include <avr/pgmspace.h>
+
+#define N 15
+#define THRESHOLD 10000
 
 // Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
 // is used in I2Cdev.h
@@ -17,28 +21,29 @@ MPU6050 accelgyro;
 
 bool recordFlag = false;
 bool unlockFlag = false;
-extern const short N = 15;
 
-int16_t ax, ay, az;
-int16_t gx, gy, gz;
 
-int16_t axRecord[N] = {0};
-int16_t ayRecord[N] = {0};
-int16_t azRecord[N] = {0};
 
-int16_t gxRecord[N] = {0};
-int16_t gyRecord[N] = {0};
-int16_t gzRecord[N] = {0};
+short ax, ay, az;
+short gx, gy, gz;
+
+short axRecord[N] = {0};
+short ayRecord[N] = {0};
+short azRecord[N] = {0};
+
+short gxRecord[N] = {0};
+short gyRecord[N] = {0};
+short gzRecord[N] = {0};
 
 short recordCounter = 0;
 
-int16_t axUnlock[N] = {0};
-int16_t ayUnlock[N] = {0};
-int16_t azUnlock[N] = {0};
+short axUnlock[N] = {0};
+short ayUnlock[N] = {0};
+short azUnlock[N] = {0};
 
-int16_t gxUnlock[N] = {0};
-int16_t gyUnlock[N] = {0};
-int16_t gzUnlock[N] = {0};
+short gxUnlock[N] = {0};
+short gyUnlock[N] = {0};
+short gzUnlock[N] = {0};
 
 short unlockCounter = 0;
 
@@ -122,16 +127,19 @@ void loop() {
 	if (!recordFlag && !unlockFlag) {
 		if(Serial.available() > 0) {
 			char operation = Serial.read();
-			Serial.print("Operation: ");
+			Serial.print("\n");
+			Serial.print("Operation ");
 			if(operation == 'r') {
-				Serial.println("Record Gesture");
+				Serial.print(operation);
+				Serial.println(": Record Gesture");
 				recordFlag = true;
 			} else if(operation == 'u') {
-				Serial.println("Unlock Gesture");
+				Serial.print(operation);
+				Serial.println(": Unlock Gesture");
 				unlockFlag = true;
 			} else {
 				Serial.print(operation);
-				Serial.println(" Not Defined");
+				Serial.println(": Not Defined");
 			}
 		}
 	} else if (recordFlag && !unlockFlag) {
@@ -142,14 +150,21 @@ void loop() {
 			gxRecord[recordCounter] = gx;
 			gyRecord[recordCounter] = gy;
 			gzRecord[recordCounter] = gz;
-			Serial.print("ax: "); Serial.print(axRecord[recordCounter]); Serial.print(" ");
-    		Serial.print("ay: "); Serial.print(ayRecord[recordCounter]); Serial.print(" ");
-    		Serial.print("az: "); Serial.print(azRecord[recordCounter]); Serial.print(" ");
-    		Serial.print("gx: "); Serial.print(gxRecord[recordCounter]); Serial.print(" ");
-    		Serial.print("gy: "); Serial.print(gyRecord[recordCounter]); Serial.print(" ");
+			Serial.print("ax: "); Serial.print(axRecord[recordCounter]); Serial.print(" | ");
+    		Serial.print("ay: "); Serial.print(ayRecord[recordCounter]); Serial.print(" | ");
+    		Serial.print("az: "); Serial.print(azRecord[recordCounter]); Serial.print(" | ");
+    		Serial.print("gx: "); Serial.print(gxRecord[recordCounter]); Serial.print(" | ");
+    		Serial.print("gy: "); Serial.print(gyRecord[recordCounter]); Serial.print(" | ");
     		Serial.print("gz: "); Serial.println(gzRecord[recordCounter]);
 			++recordCounter;
 		} else {
+			const short *axRecordSave PROGMEM = axRecord;
+			const short *ayRecordSave PROGMEM = ayRecord;
+			const short *azRecordSave PROGMEM = azRecord;
+			const short *gxRecordSave PROGMEM = gxRecord;
+			const short *gyRecordSave PROGMEM = gyRecord;
+			const short *gzRecordSave PROGMEM = gzRecord;
+
 			recordCounter = 0;
 			recordFlag = false;
 		}
@@ -161,11 +176,11 @@ void loop() {
 			gxUnlock[unlockCounter] = gx;
 			gyUnlock[unlockCounter] = gy;
 			gzUnlock[unlockCounter] = gz;
-			Serial.print("ax: "); Serial.print(axUnlock[unlockCounter]); Serial.print(" ");
-    		Serial.print("ay: "); Serial.print(ayUnlock[unlockCounter]); Serial.print(" ");
-    		Serial.print("az: "); Serial.print(azUnlock[unlockCounter]); Serial.print(" ");
-    		Serial.print("gx: "); Serial.print(gxUnlock[unlockCounter]); Serial.print(" ");
-    		Serial.print("gy: "); Serial.print(gyUnlock[unlockCounter]); Serial.print(" ");
+			Serial.print("ax: "); Serial.print(axUnlock[unlockCounter]); Serial.print(" | ");
+    		Serial.print("ay: "); Serial.print(ayUnlock[unlockCounter]); Serial.print(" | ");
+    		Serial.print("az: "); Serial.print(azUnlock[unlockCounter]); Serial.print(" | ");
+    		Serial.print("gx: "); Serial.print(gxUnlock[unlockCounter]); Serial.print(" | ");
+    		Serial.print("gy: "); Serial.print(gyUnlock[unlockCounter]); Serial.print(" | ");
     		Serial.print("gz: "); Serial.println(gzUnlock[unlockCounter]);
 			++unlockCounter;
 		} else {
@@ -178,29 +193,31 @@ void loop() {
 			short gyDistance = abs(DTWDistance(gyRecord, gyUnlock)) / 100;
 			short gzDistance = abs(DTWDistance(gzRecord, gzUnlock)) / 100;
 
-			Serial.print("ax distance: "); Serial.print(axDistance); Serial.print(" ");
-    		Serial.print("ay distance: "); Serial.print(ayDistance); Serial.print(" ");
-    		Serial.print("az distance: "); Serial.print(azDistance); Serial.print(" ");
-    		Serial.print("gx distance: "); Serial.print(gxDistance); Serial.print(" ");
-    		Serial.print("gy distance: "); Serial.print(gyDistance); Serial.print(" ");
-    		Serial.print("gz distance: "); Serial.println(gzDistance);
+			// Serial.print("ax distance: "); Serial.print(axDistance); Serial.print(" ");
+    		// Serial.print("ay distance: "); Serial.print(ayDistance); Serial.print(" ");
+    		// Serial.print("az distance: "); Serial.print(azDistance); Serial.print(" ");
+    		// Serial.print("gx distance: "); Serial.print(gxDistance); Serial.print(" ");
+    		// Serial.print("gy distance: "); Serial.print(gyDistance); Serial.print(" ");
+    		// Serial.print("gz distance: "); Serial.println(gzDistance);
 
 			
 			short accDistance = (axDistance + ayDistance + azDistance) / 3;
 			short roDistance = (gxDistance + gyDistance + gzDistance) / 3;
+			accDistance = accDistance == 0 ? 1 : accDistance;
+			roDistance = roDistance == 0 ? 1 : roDistance;
 			short distance = accDistance * roDistance;
+			Serial.print("\n");
 			Serial.print("Acceleration Distance: "); Serial.println(accDistance);
 			Serial.print("Rotation Distance: "); Serial.println(roDistance);
 			Serial.print("Total Distance: "); Serial.println(distance);
-			if(distance <= 10000) {
+			if(distance > THRESHOLD || distance < 0) {
+				Serial.println("Device Unlock Failed");
+			} else {
 				Serial.println("Device Unlocked");
 				digitalWrite(LED_PIN, HIGH);
 				delay(1000);
 				digitalWrite(LED_PIN, LOW);
-			} else {
-				Serial.println("Device Unlock Failed");
 			}
-			//
 			unlockFlag = false;
 		}
 	}
